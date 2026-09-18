@@ -6,10 +6,13 @@
 **🛠 Стек:** Power BI Desktop · Power Query (M) · DAX · Data Modeling
 **📊 Данные:** [UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) — 1 067 371 строка, 2009–2011
 
-**🔗 Живой отчёт (Publish to web):** _<укажи ссылку после публикации>_
-**📄 PDF всего отчёта:** [`report/report.pdf`](report/) · **📁 Файл:** [`report/ecommerce-customer-analytics.pbix`](report/)
+**🔗 Живой отчёт (Publish to web):** _добавляется_
+**📄 PDF отчёта / 📁 .pbix:** _добавляются_
 
-![Executive Overview](images/01-executive-overview.png)
+> 📸 Скриншоты дашборда, PDF и файл `.pbix` добавляются отдельным коммитом.
+> Уже доступно: полный код (DAX), данные и методология проекта.
+
+<!-- ![Executive Overview](images/01-executive-overview.png) -->
 
 ---
 
@@ -67,7 +70,7 @@
 
 ## 🧱 Модель данных (звёздная схема)
 
-![Model view](images/06-model.png)
+<!-- ![Model view](images/06-model.png) -->
 
 - **Fact_Sales** — продажи (гранулярность = позиция в чеке)
 - **Fact_Returns** — возвраты (отделены от продаж)
@@ -113,23 +116,23 @@ Retention % = DIVIDE ( [Active Customers], [Cohort Size] )
 
 ### 1. Executive Overview
 KPI-карточки, тренд выручки по месяцам, карта по странам, топ-товары, карточка Data Quality.
-![Executive Overview](images/01-executive-overview.png)
+<!-- ![Executive Overview](images/01-executive-overview.png) -->
 
 ### 2. Product Analytics
 Топ-товары, **Парето 80/20** (накопленная доля выручки), матрица товар × месяц, scatter «цена ↔ спрос».
-![Product Analytics](images/02-product-analytics.png)
+<!-- ![Product Analytics](images/02-product-analytics.png) -->
 
 ### 3. Customer / RFM Segmentation
 Распределение по 8 RFM-сегментам (Champions, Loyal, At Risk, Lost…), scatter R × F, `Revenue at Risk`, `% One-Time Buyers`.
-![Customer RFM](images/03-customer-rfm.png)
+<!-- ![Customer RFM](images/03-customer-rfm.png) -->
 
 ### 4. Cohort Retention
 Тепловая матрица «когорта ↓ × месяц жизни →» по `Retention %`, кривая удержания, карточки M1/M3/M12.
-![Cohort Retention](images/04-cohort-retention.png)
+<!-- ![Cohort Retention](images/04-cohort-retention.png) -->
 
 ### 5. Geography & Details
 Выручка по странам, **decomposition tree** (разложение выручки по товар/сегмент/страна), детальная таблица транзакций.
-![Geography & Details](images/05-geography-details.png)
+<!-- ![Geography & Details](images/05-geography-details.png) -->
 
 ---
 
@@ -158,6 +161,6 @@ KPI-карточки, тренд выручки по месяцам, карта 
 
 ## ▶️ Как посмотреть
 
-- **Без Power BI:** открой `report/report.pdf` или смотри скриншоты выше / живую ссылку.
-- **С Power BI Desktop:** скачай `report/ecommerce-customer-analytics.pbix` (Git LFS).
-- **Код:** меры и столбцы — в папке [`dax/`](dax/); данные и схема — в [`data/`](data/).
+- **Код (доступно сейчас):** меры и столбцы — в папке [`dax/`](dax/); данные и схема — в [`data/`](data/).
+- **Скриншоты / PDF / живой отчёт:** добавляются.
+- **С Power BI Desktop:** файл `.pbix` будет в `report/` (Git LFS).

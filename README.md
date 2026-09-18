@@ -34,9 +34,7 @@ SQL → модель → DAX/Python → визуализация → вывод.
 **Стек:** Power BI · Power Query (M) · DAX · Data Modeling
 **Что демонстрирует:** полный ETL-цикл, звёздная схема, RFM, когорты, time-intelligence, data quality
 
-[![Executive Overview](projects/01-ecommerce-customer-analytics/images/01-executive-overview.png)](projects/01-ecommerce-customer-analytics/)
-
-➡️ **[Открыть кейс](projects/01-ecommerce-customer-analytics/)** · 📄 PDF · 🔗 Живой отчёт _(скоро)_
+➡️ **[Открыть кейс →](projects/01-ecommerce-customer-analytics/)** · 🔗 Живой отчёт _(скоро)_ · 📄 PDF _(скоро)_
 
 <!-- Следующие проекты добавляются сюда по мере готовности:
 ### 2. 🏧 ATM Cash Demand & Operations — планирование инкассации (Power BI, time-series)
