@@ -1,0 +1,7 @@
+# Power BI файлы — через Git LFS (бинарные, ~15 МБ)
+*.pbix filter=lfs diff=lfs merge=lfs -text
+
+# Нормализация переводов строк для текстовых артефактов
+*.dax  text eol=lf
+*.md   text eol=lf
+*.csv  text eol=lf

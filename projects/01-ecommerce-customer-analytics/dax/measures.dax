@@ -1,0 +1,130 @@
+// ============================================================
+//  E-commerce Customer Analytics — DAX-меры (23 шт.)
+//  Модель: звёздная схема (Fact_Sales, Fact_Returns, Dim_*)
+//  Синтаксис: Power BI / Tabular. Все деления через DIVIDE().
+// ============================================================
+
+// ---------- Базовые KPI ----------
+
+Total Revenue =
+SUM ( Fact_Sales[Revenue] )
+
+Total Orders =
+DISTINCTCOUNT ( Fact_Sales[Invoice] )
+
+Total Customers =
+DISTINCTCOUNT ( Fact_Sales[CustomerID] )
+
+Units Sold =
+SUM ( Fact_Sales[Quantity] )
+
+AOV =                                    -- средний чек
+DIVIDE ( [Total Revenue], [Total Orders] )
+
+Revenue per Customer =
+DIVIDE ( [Total Revenue], [Total Customers] )
+
+
+// ---------- Возвраты ----------
+
+Return Amount =
+ABS ( SUM ( Fact_Returns[Revenue] ) )
+
+Return Rate =
+DIVIDE ( [Return Amount], [Total Revenue] + [Return Amount] )
+
+
+// ---------- Time-intelligence ----------
+
+Revenue LM =                             -- выручка прошлого месяца
+VAR CurrentDate = MAX ( Dim_Date[Date] )
+VAR PrevDate    = EDATE ( CurrentDate, -1 )
+VAR PrevYear    = YEAR ( PrevDate )
+VAR PrevMonth   = MONTH ( PrevDate )
+RETURN
+    CALCULATE (
+        [Total Revenue],
+        ALL ( Dim_Date ),
+        Dim_Date[Year] = PrevYear,
+        Dim_Date[MonthNo] = PrevMonth
+    )
+
+Revenue MoM % =                          -- прирост месяц-к-месяцу
+DIVIDE ( [Total Revenue] - [Revenue LM], [Revenue LM] )
+
+Revenue YTD =
+TOTALYTD ( [Total Revenue], Dim_Date[Date] )
+
+Revenue Running Total =
+CALCULATE (
+    [Total Revenue],
+    FILTER (
+        ALLSELECTED ( Dim_Date[Date] ),
+        Dim_Date[Date] <= MAX ( Dim_Date[Date] )
+    )
+)
+
+Snapshot Date =                          -- дата «среза» = последняя транзакция
+MAX ( Fact_Sales[InvoiceDateOnly] )
+
+
+// ---------- RFM ----------
+// R- и M-баллы живут в вычисляемых столбцах (см. calculated_columns.dax).
+// Frequency / Monetary — «человекочитаемые» алиасы базовых мер.
+
+Frequency = [Total Orders]
+
+Monetary = [Total Revenue]
+
+Champions Count =
+CALCULATE (
+    DISTINCTCOUNT ( Dim_Customer[CustomerID] ),
+    Dim_Customer[RFM Segment] = "Champions"
+)
+
+% One-Time Buyers =                      -- доля покупателей ровно с 1 заказом
+VAR one =
+    CALCULATE (
+        DISTINCTCOUNT ( Dim_Customer[CustomerID] ),
+        FILTER ( Dim_Customer, [F_Score] = 1 )
+    )
+RETURN
+    DIVIDE ( one, DISTINCTCOUNT ( Dim_Customer[CustomerID] ) )
+
+Revenue at Risk =                        -- выручка от сегментов At Risk / Cant Lose Them
+CALCULATE (
+    [Total Revenue],
+    Dim_Customer[RFM Segment] IN { "At Risk", "Cant Lose Them" }
+)
+
+
+// ---------- Когортный retention ----------
+
+Active Customers =                        -- числитель когорты
+DISTINCTCOUNT ( Fact_Sales[CustomerID] )
+
+Cohort Size =                             -- знаменатель: размер когорты (месяц 0)
+CALCULATE (
+    DISTINCTCOUNT ( Dim_Customer[CustomerID] ),
+    ALLEXCEPT ( Dim_Customer, Dim_Customer[Cohort Month] )
+)
+
+Retention % =
+DIVIDE ( [Active Customers], [Cohort Size] )
+
+
+// ---------- Товарная аналитика ----------
+
+Cumulative Revenue Share =                -- накопленная доля выручки (Парето 80/20)
+VAR CurrentRevenue = [Total Revenue]
+VAR TotalRevenue   = CALCULATE ( [Total Revenue], ALLSELECTED ( Dim_Product[Description] ) )
+VAR ProductsBefore = FILTER ( ALLSELECTED ( Dim_Product[Description] ), [Total Revenue] >= CurrentRevenue )
+VAR CumulativeRevenue = CALCULATE ( [Total Revenue], ProductsBefore )
+RETURN
+    DIVIDE ( CumulativeRevenue, TotalRevenue )
+
+
+// ---------- Качество данных ----------
+
+Revenue Unknown =                         -- выручка от неатрибутированных клиентов
+CALCULATE ( [Total Revenue], Dim_Customer[Country] = "Unknown" )

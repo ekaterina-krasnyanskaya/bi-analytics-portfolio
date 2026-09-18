@@ -1,0 +1,89 @@
+// ============================================================
+//  E-commerce Customer Analytics — вычисляемые столбцы (DAX)
+//  RFM-скоринг и когортные признаки на уровне строк модели.
+// ============================================================
+
+// ---------- Dim_Customer: RFM ----------
+// Снапшот-дата фиксируется как максимум по ВСЕМ продажам
+// (ALL(Fact_Sales)) — корректно для статического датасета.
+
+Dim_Customer[R_Score] =                   -- Recency: чем свежее последняя покупка, тем выше
+VAR LastPurchase = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ), ALLEXCEPT ( Dim_Customer, Dim_Customer[CustomerID] ) )
+VAR SnapshotDate = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ), ALL ( Fact_Sales ) )
+VAR DaysDiff     = DATEDIFF ( LastPurchase, SnapshotDate, DAY )
+RETURN
+    SWITCH ( TRUE (),
+        DaysDiff <= 30,  5,
+        DaysDiff <= 90,  4,
+        DaysDiff <= 180, 3,
+        DaysDiff <= 365, 2,
+        1
+    )
+
+Dim_Customer[F_Score] =                   -- Frequency: число уникальных заказов
+VAR f = CALCULATE ( DISTINCTCOUNT ( Fact_Sales[Invoice] ) )
+RETURN
+    SWITCH ( TRUE (),
+        f >= 10, 5,
+        f >= 5,  4,
+        f >= 3,  3,
+        f >= 2,  2,
+        1
+    )
+
+Dim_Customer[M_Score] =                   -- Monetary: суммарная выручка клиента
+VAR m = CALCULATE ( SUM ( Fact_Sales[Revenue] ) )
+RETURN
+    SWITCH ( TRUE (),
+        m >= 5000, 5,
+        m >= 2000, 4,
+        m >= 900,  3,
+        m >= 300,  2,
+        1
+    )
+
+Dim_Customer[RFM Segment] =               -- сегмент по сетке R × F
+VAR r = [R_Score]
+VAR f = [F_Score]
+RETURN
+    SWITCH ( TRUE (),
+        r >= 4 && f >= 4, "Champions",
+        r >= 3 && f >= 3, "Loyal",
+        r >= 4 && f <= 2, "New / Promising",
+        r >= 3 && f <= 2, "Potential",
+        r = 2,            "At Risk",
+        r = 1 && f >= 3,  "Cant Lose Them",
+        r = 1,            "Lost",
+        "Others"
+    )
+
+Dim_Customer[Recency Days] =              -- дней с последней покупки до снапшота
+VAR LastPurchase = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ) )
+VAR SnapshotDate = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ), ALL ( Fact_Sales ) )
+RETURN
+    DATEDIFF ( LastPurchase, SnapshotDate, DAY )
+
+
+// ---------- Dim_Customer: когорта ----------
+
+Dim_Customer[Cohort Date] =              -- дата первой покупки клиента
+CALCULATE ( MIN ( Fact_Sales[InvoiceDateOnly] ) )
+
+Dim_Customer[Cohort Month] =            -- месяц привлечения, "YYYY-MM"
+CALCULATE ( FORMAT ( MIN ( Fact_Sales[InvoiceDateOnly] ), "YYYY-MM" ) )
+
+
+// ---------- Fact_Sales: когортный индекс ----------
+
+Fact_Sales[Cohort Index] =              -- сколько месяцев прошло от привлечения до транзакции
+DATEDIFF (
+    RELATED ( Dim_Customer[Cohort Date] ),
+    Fact_Sales[InvoiceDateOnly],
+    MONTH
+)
+
+
+// ---------- Dim_Date ----------
+
+Dim_Date[YearMonthSort] =               -- ключ сортировки "год*100+месяц"
+YEAR ( [Date] ) * 100 + MONTH ( [Date] )

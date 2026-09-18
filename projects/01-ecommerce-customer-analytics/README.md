@@ -1,0 +1,163 @@
+# 🛒 E-commerce: Sales & Customer Analytics
+
+> Дашборд клиентской аналитики онлайн-ритейлера: очистка **1.07 млн** транзакций,
+> звёздная модель данных, **RFM-сегментация** и **когортный retention** на DAX.
+
+**🛠 Стек:** Power BI Desktop · Power Query (M) · DAX · Data Modeling
+**📊 Данные:** [UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) — 1 067 371 строка, 2009–2011
+
+**🔗 Живой отчёт (Publish to web):** _<укажи ссылку после публикации>_
+**📄 PDF всего отчёта:** [`report/report.pdf`](report/) · **📁 Файл:** [`report/ecommerce-customer-analytics.pbix`](report/)
+
+![Executive Overview](images/01-executive-overview.png)
+
+---
+
+## 📌 Задача
+
+Маркетинг тратит бюджет одинаково на всех клиентов и жалуется на низкий возврат.
+Дашборд отвечает бизнесу на четыре вопроса:
+
+1. Кто наши ценные клиенты и сколько выручки под риском оттока?
+2. Какие товары и рынки держат выручку?
+3. Держатся ли клиенты со временем (retention по когортам)?
+4. Насколько данные вообще пригодны для решений (data quality)?
+
+---
+
+## 📊 Ключевые цифры (после очистки)
+
+| Метрика | Значение |
+|---|---|
+| Выручка | **£20.1 млн** |
+| Заказов | **39 530** |
+| Идентифицированных клиентов | **5 853** |
+| Средний чек (AOV) | **£509** |
+| Стран | **43** |
+| Период | дек-2009 → дек-2011 |
+
+---
+
+## 🧹 ETL — что чистила (Power Query)
+
+Исходник — «грязный» ритейл-экспорт. Порядок обработки:
+
+| Проблема | Объём | Решение |
+|---|---|---|
+| Отмены/возвраты (Invoice начинается с `C`) | ~19 500 строк | Вынесены в отдельную таблицу `Fact_Returns` (флаг `IsReturn`) |
+| Отрицательное `Quantity` | ~23 000 строк | Отфильтрованы из продаж (`Quantity > 0`) |
+| Цена ≤ 0 | ~6 200 строк | Отфильтрованы (`Price > 0`) |
+| Служебные `StockCode` (POST, DOT, BANK CHARGES…) | — | Помечены флагом `IsProduct = false` |
+| **Пропущенный `CustomerID`** | **~243 000 строк (23%)** | **См. решение ниже** ⬇️ |
+
+### Как обработаны клиенты без ID — осознанный выбор, а не «удалить и забыть»
+
+23% транзакций не привязаны к клиенту. Это классическая развилка. Решение:
+
+- **для выручки** такие строки **сохранены** (это реальные продажи, ~£2.7 млн) —
+  иначе Total Revenue занижается на 13%;
+- **для клиентской аналитики** (RFM, когорты, retention) они **исключены**,
+  потому что без ID клиента посчитать нельзя.
+
+Контрольная точка: `Fact_Sales` ≈ **1 037 050 строк**, `SUM(Revenue)` ≈ **£20.12 млн**.
+Мера `Revenue Unknown` в модели явно показывает вклад неатрибутированных продаж —
+чтобы цифра не «пряталась».
+
+---
+
+## 🧱 Модель данных (звёздная схема)
+
+![Model view](images/06-model.png)
+
+- **Fact_Sales** — продажи (гранулярность = позиция в чеке)
+- **Fact_Returns** — возвраты (отделены от продаж)
+- **Dim_Customer** — клиент, страна, RFM-баллы, сегмент, когорта
+- **Dim_Product** — товар, описание, признак `IsProduct`
+- **Dim_Date** — календарь (помечен *Mark as Date Table*)
+
+Связи — «звезда», однонаправленные (`Dim → Fact`), без замыканий и fan-out.
+
+---
+
+## 🧮 DAX — что внутри
+
+Полный код: [`dax/measures.dax`](dax/measures.dax) (23 меры) · [`dax/calculated_columns.dax`](dax/calculated_columns.dax)
+
+**RFM-скоринг** — R/F/M-баллы 1–5 в вычисляемых столбцах, снапшот-дата зафиксирована
+как максимум по всем продажам:
+
+```dax
+Dim_Customer[R_Score] =
+VAR LastPurchase = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ), ALLEXCEPT ( Dim_Customer, Dim_Customer[CustomerID] ) )
+VAR SnapshotDate = CALCULATE ( MAX ( Fact_Sales[InvoiceDateOnly] ), ALL ( Fact_Sales ) )
+VAR DaysDiff     = DATEDIFF ( LastPurchase, SnapshotDate, DAY )
+RETURN SWITCH ( TRUE (), DaysDiff <= 30, 5, DaysDiff <= 90, 4, DaysDiff <= 180, 3, DaysDiff <= 365, 2, 1 )
+```
+
+**Когортный retention** — размер когорты через `ALLEXCEPT`, индекс месяца через `DATEDIFF`:
+
+```dax
+Cohort Size =
+CALCULATE ( DISTINCTCOUNT ( Dim_Customer[CustomerID] ), ALLEXCEPT ( Dim_Customer, Dim_Customer[Cohort Month] ) )
+
+Retention % = DIVIDE ( [Active Customers], [Cohort Size] )
+```
+
+Проверка корректности: месяц 0 у всех когорт = **100%** ✅
+
+Все деления — через `DIVIDE()` (защита от деления на ноль).
+
+---
+
+## 📄 Страницы отчёта
+
+### 1. Executive Overview
+KPI-карточки, тренд выручки по месяцам, карта по странам, топ-товары, карточка Data Quality.
+![Executive Overview](images/01-executive-overview.png)
+
+### 2. Product Analytics
+Топ-товары, **Парето 80/20** (накопленная доля выручки), матрица товар × месяц, scatter «цена ↔ спрос».
+![Product Analytics](images/02-product-analytics.png)
+
+### 3. Customer / RFM Segmentation
+Распределение по 8 RFM-сегментам (Champions, Loyal, At Risk, Lost…), scatter R × F, `Revenue at Risk`, `% One-Time Buyers`.
+![Customer RFM](images/03-customer-rfm.png)
+
+### 4. Cohort Retention
+Тепловая матрица «когорта ↓ × месяц жизни →» по `Retention %`, кривая удержания, карточки M1/M3/M12.
+![Cohort Retention](images/04-cohort-retention.png)
+
+### 5. Geography & Details
+Выручка по странам, **decomposition tree** (разложение выручки по товар/сегмент/страна), детальная таблица транзакций.
+![Geography & Details](images/05-geography-details.png)
+
+---
+
+## 💡 Инсайты для бизнеса
+
+- **Выручка сильно сконцентрирована** — небольшая доля товаров даёт ~80% оборота
+  (Парето), значит ассортиментные и складские решения нужно принимать точечно.
+- **Клиентская база расслаивается по RFM** — сегменты `At Risk` и `Cant Lose Them`
+  держат заметную выручку и являются приоритетом для удержания (мера `Revenue at Risk`).
+- **Retention падает круто после первого месяца** — типичная проблема онлайн-ритейла;
+  когортная матрица показывает, какие месяцы привлечения были удачнее.
+- **Качество данных honest-by-design** — 23% выручки не атрибутировано клиенту;
+  это явно вынесено в дашборд, а не спрятано.
+
+---
+
+## 🎯 Что показывает этот проект
+
+- Полный цикл: **грязные данные → очистка (Power Query) → модель → DAX → дашборд → инсайт**
+- Звёздная схема и корректные связи (без fan-out)
+- Продвинутый DAX: RFM, когорты, time-intelligence, Парето
+- **Инженерное отношение к данным**: осознанная обработка пропусков, проверка
+  корректности мер, явная витрина data quality
+
+---
+
+## ▶️ Как посмотреть
+
+- **Без Power BI:** открой `report/report.pdf` или смотри скриншоты выше / живую ссылку.
+- **С Power BI Desktop:** скачай `report/ecommerce-customer-analytics.pbix` (Git LFS).
+- **Код:** меры и столбцы — в папке [`dax/`](dax/); данные и схема — в [`data/`](data/).
