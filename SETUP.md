@@ -1,53 +1,34 @@
-# Финальный шаг — добавить визуалы
+# Портфолио — статус и обслуживание
 
-✅ Репозиторий уже создан и опубликован:
-**https://github.com/ekaterina-krasnyanskaya/bi-analytics-portfolio** (публичный).
-Залито: hero-README, кейс проекта, весь код DAX, данные, конфиги, Git LFS.
+✅ **Опубликовано:** https://github.com/ekaterina-krasnyanskaya/bi-analytics-portfolio (публичный).
 
-Осталось одно — то, что можно сделать только руками в Power BI Desktop
-(отрендерить страницы отчёта автоматически невозможно). ~10–15 минут.
+Что внутри:
+- **Проект 01 — E-commerce Customer Analytics:** кейс, весь код DAX, данные,
+  5 скриншотов, PDF отчёта, файл `.pbix` (Git LFS).
+- **Проект 02 — Сквозная аналитика (воронка + рекламные каналы):** кейс,
+  2 скриншота, файл `.pbix` (Git LFS).
 
 ---
 
-## 1. Доделать модель в Power BI (рекомендуется)
-
-Открой `ecommerce-customer-analytics.pbix` (в `Загрузки`):
-
-- В представлении **Модель** удали таблицу **`online_retail_II (1)`** — это сырой
-  дубликат на 1 млн строк (правой кнопкой → *Удалить*, или сними «Enable load»).
-- *Файл → Параметры → Загрузка данных* → снять **Auto date/time**.
-- Со страницы **Cohort Retention** убери слайсер `Year` (искажает Retention %).
-- Сохрани файл.
-
-## 2. Снять визуалы
-
-- **5 скриншотов** страниц (`Win + Shift + S`) → положить в
-  `projects/01-ecommerce-customer-analytics/images/` с именами:
-  `01-executive-overview.png`, `02-product-analytics.png`, `03-customer-rfm.png`,
-  `04-cohort-retention.png`, `05-geography-details.png`
-  (по желанию `06-model.png` — вид модели).
-- **PDF:** *Файл → Экспорт → Экспорт в PDF* →
-  `projects/01-ecommerce-customer-analytics/report/report.pdf`.
-- **Скопировать** `ecommerce-customer-analytics.pbix` →
-  `projects/01-ecommerce-customer-analytics/report/`.
-
-## 3. Залить (2 команды)
+## Как обновлять
 
 ```
 cd C:\Users\krasn\ekaterina-bi-portfolio
 git add .
-git commit -m "Add dashboard screenshots, PDF and .pbix"
+git commit -m "что изменила"
 git push
 ```
-
-После этого напиши мне «визуалы добавила» — я включу картинки в README
-(они сейчас спрятаны в комментариях, чтобы не висели «битыми») и добавлю
-живую ссылку на отчёт.
+(пуш идёт под аккаунтом `ekaterina-krasnyanskaya` — настроено).
 
 ---
 
-## Дальше (по желанию)
+## Что стоит доделать (по желанию, повышает качество)
 
-- Опубликовать отчёт: Power BI Service → *Publish to web* → вставить ссылку в README.
-- В резюме и LinkedIn указать ссылку на репозиторий.
-- Обновлять что-либо потом: правки → `git add . && git commit -m "..." && git push`.
+1. **Живые ссылки на отчёты.** Power BI Service → *Publish to web* → вставить ссылки
+   в README проектов вместо «_(скоро)_».
+2. **Проект 01, блок Data Quality** на странице Executive Overview всё ещё показывает
+   старые цифры (£17.74 млн / 805 549) — не совпадает с KPI (£20.12 млн). Поправить
+   текст в Power BI и пере-экспортировать `report.pdf`.
+3. **Проект 01, модель:** удалить сырую таблицу `online_retail_II (1)`, выключить
+   Auto date/time — файл станет легче.
+4. Указать ссылку на репозиторий в резюме и в Telegram-профиле.
